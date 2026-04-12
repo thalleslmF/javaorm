@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-11  
 **Project:** javaorm — a learning-oriented Java ORM built on JDBC and reflection  
-**Status:** Approved
+**Status:** Approved (reviewed)
 
 ---
 
