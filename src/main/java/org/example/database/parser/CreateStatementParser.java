@@ -1,46 +1,65 @@
 package org.example.database.parser;
 
-import org.example.database.reflection.ReflectionUtils;
+import org.example.database.reflection.ColumnMetadata;
+import org.example.database.reflection.EntityMetadata;
 
-import java.lang.reflect.Field;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class CreateStatementParser implements StatementParser {
-    private String[] keys = {"INSERT", "INTO", "VALUES"};
+    private final String[] keys = {"INSERT", "INTO", "VALUES"};
 
     @Override
-    public String parse(Object object) {
-        Map<String,Object> keyValueFields  = ReflectionUtils.getKeyValuesMap(object);
-        return createStatement(keyValueFields, object.getClass().getSimpleName());
+    public String parse(EntityMetadata metadata) {
+        return createStatement(metadata);
     }
 
-    private String createStatement(Map<String, Object> keyValueFields, String name) {
+    private String createStatement(EntityMetadata metadata) {
         StringBuilder statement = new StringBuilder();
 
-        for(String key : keys ) {
+        for (String key : keys) {
             statement.append(key);
             statement.append(ParserConstants.SPACE_DELIMITER);
             if (key.equals("INTO")) {
-                statement.append(name);
-                statement.append(getKeysStatement(keyValueFields));
+                statement.append(metadata.tableName);
+                statement.append(getKeysStatement(metadata));
                 statement.append(ParserConstants.SPACE_DELIMITER);
             }
             if (key.equals("VALUES")) {
-                statement.append(getValuesStatement(keyValueFields));
+                statement.append(getValuesStatement(metadata));
             }
         }
         return statement.toString();
     }
 
-    private String getValuesStatement(Map<String, Object> keyValueFields) {
-        return keyValueFields.entrySet().stream().map(it-> String.format("'%s'",it.getValue())).collect(Collectors.joining(", ","(", ")"));
+    private String getValuesStatement(EntityMetadata metadata) {
+        return metadata.columns.stream()
+                .map(this::formatValue)
+                .collect(Collectors.joining(", ", "(", ")"));
     }
 
-    private String getKeysStatement(Map<String,Object> keys) {
-        return keys.entrySet().stream().map(Map.Entry::getKey).collect(Collectors.joining(", ","(", ")"));
+    private String formatValue(ColumnMetadata columnMetadata) {
+        Object value = columnMetadata.value;
+        if (value == null) {
+            return "null";
+        }
+        if (isNumeric(columnMetadata.javaType) || isBoolean(columnMetadata.javaType)) {
+            return String.valueOf(value);
+        }
+        return String.format("'%s'", String.valueOf(value).replace("'", "''"));
     }
 
+    private boolean isNumeric(Class<?> type) {
+        return Integer.class.equals(type) || int.class.equals(type)
+                || Float.class.equals(type) || float.class.equals(type)
+                || Double.class.equals(type) || double.class.equals(type)
+                || Long.class.equals(type) || long.class.equals(type);
+    }
 
+    private boolean isBoolean(Class<?> type) {
+        return Boolean.class.equals(type) || boolean.class.equals(type);
+    }
+
+    private String getKeysStatement(EntityMetadata metadata) {
+        return metadata.columns.stream().map(it -> it.columnName).collect(Collectors.joining(", ", "(", ")"));
+    }
 }

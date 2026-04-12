@@ -59,6 +59,8 @@ The previous implementation was reverted so the feature can be rebuilt with clea
 1. Reverted commit `b7ebaad` before re-implementation to restore a clean baseline.
 2. The next implementation should be split into small reviewable commits by phase.
 3. This document is the running log for implementation decisions and review notes.
+4. Entity validation remains runtime-based for now, executed at the start of ORM operations in `DB`, because that keeps the public API simple and matches the current reflection-driven architecture.
+5. We will keep custom annotations with JPA-style names and semantics (`@Entity`, `@Id`, etc.) instead of depending on JPA itself. That gives us familiar rules, including the strong expectation that an entity must have exactly one id, without adding an external persistence dependency.
 
 ## Review checklist
 
@@ -72,5 +74,9 @@ The previous implementation was reverted so the feature can be rebuilt with clea
 - [ ] tests cover config, metadata, validator, translator, and integration flow
 
 ## Follow-up notes
+
+### 2026-04-12
+- Future exploration: evaluate whether some validation can move earlier than operation-time, for example through explicit metadata bootstrap or startup-time schema registration.
+- Current choice: keep validation at runtime in `DB` and enforce the JPA-like invariant that every ORM-managed entity must declare exactly one `@Id`.
 
 Add dated notes below when implementation decisions change or additional tradeoffs appear.
