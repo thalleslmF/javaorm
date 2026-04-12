@@ -78,5 +78,7 @@ The previous implementation was reverted so the feature can be rebuilt with clea
 ### 2026-04-12
 - Future exploration: evaluate whether some validation can move earlier than operation-time, for example through explicit metadata bootstrap or startup-time schema registration.
 - Current choice: keep validation at runtime in `DB` and enforce the JPA-like invariant that every ORM-managed entity must declare exactly one `@Id`.
+- Integration tests are required, not optional. If Docker is unavailable locally, that is an environment problem to fix, not a reason to silently skip coverage.
+- CI must run `mvn test` on pull requests with Docker available so Testcontainers-backed coverage remains enforced.
 
 Add dated notes below when implementation decisions change or additional tradeoffs appear.

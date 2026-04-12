@@ -5,7 +5,6 @@ import org.example.database.DB;
 import org.example.database.Driver;
 import org.junit.Assert;
 import org.junit.Test;
-import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 import java.sql.ResultSet;
@@ -15,10 +14,6 @@ public class CreateUserTest {
 
     @Test
     public void shouldCreateUserTest() throws SQLException, ClassNotFoundException {
-        if (!DockerClientFactory.instance().isDockerAvailable()) {
-            return;
-        }
-
         UserTest userTest = new UserTest();
         userTest.setId("1");
         userTest.setName("thalles");
