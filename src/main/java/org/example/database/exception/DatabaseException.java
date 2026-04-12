@@ -1,9 +1,20 @@
 package org.example.database.exception;
 
-import java.sql.SQLException;
-
 public class DatabaseException extends OrmException {
-    public DatabaseException(String message, SQLException cause) {
+    private final Class<?> entityClass;
+    private final String sqlQuery;
+
+    public DatabaseException(String message, Class<?> entityClass, String sqlQuery, Throwable cause) {
         super(message, cause);
+        this.entityClass = entityClass;
+        this.sqlQuery = sqlQuery;
+    }
+
+    public Class<?> getEntityClass() {
+        return entityClass;
+    }
+
+    public String getSqlQuery() {
+        return sqlQuery;
     }
 }

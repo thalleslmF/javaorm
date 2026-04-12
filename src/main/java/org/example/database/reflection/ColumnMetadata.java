@@ -9,13 +9,19 @@ public class ColumnMetadata {
     public boolean unique;
     public boolean isPrimaryKey;
     public Object value;
+    public Class<?> javaType;
+    public Field field;
 
-    public static ColumnMetadata fromField(Field field) {
+    public ColumnMetadata copy() {
         ColumnMetadata metadata = new ColumnMetadata();
-        metadata.columnName = field.getName();
-        metadata.nullable = true;
-        metadata.unique = false;
-        metadata.isPrimaryKey = false;
+        metadata.columnName = this.columnName;
+        metadata.sqlType = this.sqlType;
+        metadata.nullable = this.nullable;
+        metadata.unique = this.unique;
+        metadata.isPrimaryKey = this.isPrimaryKey;
+        metadata.value = this.value;
+        metadata.javaType = this.javaType;
+        metadata.field = this.field;
         return metadata;
     }
 }

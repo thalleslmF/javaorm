@@ -1,9 +1,20 @@
 package org.example.database.exception;
 
-import java.lang.reflect.Class;
-
 public class EntityNotFoundException extends OrmException {
-    public EntityNotFoundException(Class<?> entityClass, String sqlQuery) {
-        super("No results found for entity '" + entityClass.getSimpleName() + "' with query: " + sqlQuery);
+    private final Class<?> entityClass;
+    private final String sqlQuery;
+
+    public EntityNotFoundException(String message, Class<?> entityClass, String sqlQuery) {
+        super(message);
+        this.entityClass = entityClass;
+        this.sqlQuery = sqlQuery;
+    }
+
+    public Class<?> getEntityClass() {
+        return entityClass;
+    }
+
+    public String getSqlQuery() {
+        return sqlQuery;
     }
 }

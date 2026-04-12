@@ -1,9 +1,26 @@
 package org.example.database.exception;
 
-import java.lang.reflect.Class;
-
 public class DuplicateKeyException extends OrmException {
-    public DuplicateKeyException(Class<?> entityClass, String sqlQuery, String constraintName) {
-        super("Duplicate key violation on entity '" + entityClass.getSimpleName() + "': unique constraint '" + constraintName + "'");
+    private final Class<?> entityClass;
+    private final String sqlQuery;
+    private final String constraintName;
+
+    public DuplicateKeyException(String message, Class<?> entityClass, String sqlQuery, String constraintName, Throwable cause) {
+        super(message, cause);
+        this.entityClass = entityClass;
+        this.sqlQuery = sqlQuery;
+        this.constraintName = constraintName;
+    }
+
+    public Class<?> getEntityClass() {
+        return entityClass;
+    }
+
+    public String getSqlQuery() {
+        return sqlQuery;
+    }
+
+    public String getConstraintName() {
+        return constraintName;
     }
 }

@@ -1,92 +1,108 @@
 package org.example.database;
 
-import org.example.database.annotation.Entity;
-import org.example.database.annotation.Table;
-import org.example.database.exception.*;
-import org.example.database.parser.*;
-import org.example.database.reflection.*;
-import java.lang.reflect.Field;
-import java.sql.*;
-import java.util.*;
+import org.example.database.exception.EntityNotFoundException;
+import org.example.database.exception.ExceptionTranslator;
+import org.example.database.parser.CreateStatementParser;
+import org.example.database.parser.CreateTableStatementParser;
+import org.example.database.parser.FindStatementParser;
+import org.example.database.parser.Parser;
+import org.example.database.reflection.EntityMetadata;
+import org.example.database.reflection.EntityValidator;
+import org.example.database.reflection.ReflectionUtils;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class DB {
-    private Connection connection;
-    private OrmConfig ormConfig;
-    private Set<Class<?>> initializedEntities = new HashSet<>();
-    private Map<Class<?>, EntityMetadata> schemaCache = new HashMap<>();
+    private final Statement statement;
+    private final Connection connection;
+    private final OrmConfig ormConfig;
+    private final Map<Class<?>, EntityMetadata> schemaCache = new HashMap<>();
+    private final Set<Class<?>> initializedEntities = new HashSet<>();
 
-    private DB(Connection connection) {
+    public DB(Connection connection, Statement statement, OrmConfig ormConfig) {
         this.connection = connection;
-        this.ormConfig = OrmConfig.load();
+        this.statement = statement;
+        this.ormConfig = ormConfig;
     }
 
-    public static DB Open(String url, Driver driver, String username, String password) throws SQLException {
-        Connection connection = DriverManager.getConnection(url, username, password);
-        return new DB(connection);
+    public static DB Open(String url, Driver driver, String user, String password) throws SQLException, ClassNotFoundException {
+        Class.forName(driver.getDriverName());
+
+        Connection connection = DriverManager.getConnection(url, user, password);
+        return new DB(connection, connection.createStatement(), OrmConfig.load());
     }
 
-    public void CreateTable(Object entity) {
+    public void Insert(Object object) {
+        Class<?> entityClass = object.getClass();
+        EntityValidator.validate(entityClass);
+        EntityMetadata structuralMetadata = getOrCreateMetadata(entityClass);
+        initializeEntityIfNeeded(entityClass, structuralMetadata);
+        EntityMetadata metadata = structuralMetadata.withValues(object);
+        String sql = Parser.parseStatement(new CreateStatementParser(), metadata);
         try {
-            EntityValidator.validate(entity.getClass());
-            EntityMetadata metadata = EntityMetadata.fromClass(entity.getClass());
-            String createTableSQL = Parser.parseStatement(new CreateTableStatementParser(), metadata);
-            try (Statement stmt = connection.createStatement()) {
-                stmt.execute(createTableSQL);
-            }
+            this.statement.execute(sql);
         } catch (SQLException e) {
-            throw ExceptionTranslator.translate(e, entity.getClass(), createTableSQL);
+            throw ExceptionTranslator.translate(e, entityClass, sql);
         }
     }
 
-    public void Insert(Object entity) {
+    public void CreateTable(Object object) {
+        Class<?> entityClass = object.getClass();
+        EntityValidator.validate(entityClass);
+        EntityMetadata metadata = getOrCreateMetadata(entityClass);
+        String sql = Parser.parseStatement(new CreateTableStatementParser(), metadata);
         try {
-            EntityValidator.validate(entity.getClass());
-            Class<?> entityClass = entity.getClass();
-            EntityMetadata metadata = schemaCache.computeIfAbsent(entityClass, EntityMetadata::fromClass);
-            EntityMetadata metadataWithValues = metadata.withValues(entity);
-
-            if (ormConfig.getDdlAuto() == OrmConfig.DdlAuto.CREATE_IF_NOT_EXISTS && !initializedEntities.contains(entityClass)) {
-                String createTableSQL = Parser.parseStatement(new CreateTableStatementParser(), metadata);
-                try (Statement stmt = connection.createStatement()) {
-                    stmt.execute(createTableSQL);
-                }
-                initializedEntities.add(entityClass);
-            }
-
-            String insertSQL = Parser.parseStatement(new CreateStatementParser(), metadataWithValues);
-            try (Statement stmt = connection.createStatement()) {
-                stmt.execute(insertSQL);
-            }
+            this.statement.execute(sql);
         } catch (SQLException e) {
-            throw ExceptionTranslator.translate(e, entity.getClass(), "INSERT");
+            throw ExceptionTranslator.translate(e, entityClass, sql);
         }
     }
 
-    public ResultSet Find(Class<?> entityClass, String query) {
+    public ResultSet Find(Object object) {
+        Class<?> entityClass = object.getClass();
+        EntityValidator.validate(entityClass);
+        EntityMetadata structuralMetadata = getOrCreateMetadata(entityClass);
+        EntityMetadata metadata = structuralMetadata.withValues(object);
+        String sql = Parser.parseStatement(new FindStatementParser(), metadata);
+
         try {
-            EntityValidator.validate(entityClass);
-            EntityMetadata metadata = schemaCache.computeIfAbsent(entityClass, EntityMetadata::fromClass);
-            String selectSQL = Parser.parseStatement(new FindStatementParser(), metadata);
-            Statement stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery(selectSQL);
-
-            if (!rs.next()) {
-                throw new EntityNotFoundException(entityClass, selectSQL);
+            ResultSet resultSet = this.statement.executeQuery(sql);
+            if (!resultSet.next()) {
+                throw new EntityNotFoundException(
+                        String.format("No results found for entity '%s' with query: %s", entityClass.getSimpleName(), sql),
+                        entityClass,
+                        sql
+                );
             }
-
-            return rs;
+            return resultSet;
         } catch (SQLException e) {
-            throw ExceptionTranslator.translate(e, entityClass, query);
+            throw ExceptionTranslator.translate(e, entityClass, sql);
         }
     }
 
-    public void Close() {
+    private EntityMetadata getOrCreateMetadata(Class<?> entityClass) {
+        return schemaCache.computeIfAbsent(entityClass, ReflectionUtils::getEntityMetadata);
+    }
+
+    private void initializeEntityIfNeeded(Class<?> entityClass, EntityMetadata structuralMetadata) {
+        if (ormConfig.getDdlAuto() != OrmConfig.DdlAuto.CREATE_IF_NOT_EXISTS || initializedEntities.contains(entityClass)) {
+            return;
+        }
+
+        String sql = Parser.parseStatement(new CreateTableStatementParser(), structuralMetadata);
         try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-            }
+            this.statement.execute(sql);
+            initializedEntities.add(entityClass);
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw ExceptionTranslator.translate(e, entityClass, sql);
         }
     }
 }

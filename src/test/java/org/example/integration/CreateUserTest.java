@@ -7,7 +7,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-import javax.xml.transform.Result;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -18,7 +17,7 @@ public class CreateUserTest {
         UserTest userTest = new UserTest();
         userTest.setId("1");
         userTest.setName("thalles");
-        userTest.setAge("20");
+        userTest.setAge(20);
         PostgreSQLContainer postgresContainer = new PostgreSQLContainer();
         postgresContainer.start();
         String url = postgresContainer.getJdbcUrl();
@@ -28,6 +27,6 @@ public class CreateUserTest {
         ResultSet resultSet = db.Find(userTest);
         Assert.assertEquals(resultSet.getString(1), userTest.getId());
         Assert.assertEquals(resultSet.getString(2), userTest.getName());
-        Assert.assertEquals(resultSet.getString(3), userTest.getAge());
+        Assert.assertEquals(resultSet.getInt(3), userTest.getAge());
     }
 }
