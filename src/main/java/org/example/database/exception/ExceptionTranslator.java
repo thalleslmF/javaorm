@@ -14,16 +14,16 @@ public class ExceptionTranslator {
             String message = String.format("Duplicate key violation on entity '%s': unique constraint '%s'",
                     entityClass != null ? entityClass.getSimpleName() : "unknown",
                     constraintName);
-            return new DuplicateKeyException(message, entityClass, sql, constraintName);
+            return new DuplicateKeyException(message);
         }
 
         if (sqlState != null && sqlState.startsWith("23")) {
             String message = String.format("Database error executing query '%s': %s", sql, e.getMessage());
-            return new DatabaseException(message, sql, e);
+            return new DatabaseException(message);
         }
 
         String message = String.format("Database error executing query '%s': %s", sql, e.getMessage());
-        return new DatabaseException(message, sql, e);
+        return new DatabaseException(message);
     }
 
     private static String extractConstraintName(SQLException e) {
