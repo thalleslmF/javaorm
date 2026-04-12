@@ -1,8 +1,5 @@
 package org.example.database.exception;
 
-/**
- * Thrown when Find() returns zero rows.
- */
 public class EntityNotFoundException extends OrmException {
 
     private final Class<?> entityClass;

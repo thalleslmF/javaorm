@@ -1,8 +1,5 @@
 package org.example.database.exception;
 
-/**
- * Thrown when INSERT violates a UNIQUE or PRIMARY KEY constraint (PostgreSQL SQLState 23505).
- */
 public class DuplicateKeyException extends OrmException {
 
     private final Class<?> entityClass;
