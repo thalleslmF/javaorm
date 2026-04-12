@@ -1,6 +1,7 @@
 package org.example.database.parser;
 
-public interface StatementParser {
+import org.example.database.reflection.EntityMetadata;
 
-    String parse(Object object);
+public interface StatementParser {
+    String parse(EntityMetadata metadata);
 }
